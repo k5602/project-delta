@@ -49,7 +49,12 @@ class EduGameModel(mesa.Model):
                     if m.num_agents > 0
                     else 0.0
                 ),
-            }
+            },
+            agent_reporters={
+                "payoff": "payoff",
+                "last_action": lambda a: a.last_action.name if a.last_action else None,
+                "strategy": lambda a: a.strategy.name,
+            },
         )
 
         for _ in range(n_agents):

@@ -1,104 +1,150 @@
 from __future__ import annotations
 
-from typing import Optional
-
+import altair as alt
 import matplotlib.pyplot as plt
+import networkx as nx
 import pandas as pd
+import solara
 
-from student_agent import Strategy
+from payoff_config import Action
+
+update_counter = solara.reactive(0)
+
+model_params = {
+    "n_agents": solara.SliderInt(
+        value=20, min=4, max=100, step=2, label="Number of Agents"
+    ),
+    "strategy": {
+        "type": "Select",
+        "values": ["Q_LEARNING", "TIT_FOR_TAT", "GRIM_TRIGGER", "RANDOM"],
+        "value": "Q_LEARNING",
+        "label": "Strategy",
+    },
+    "rng": {"type": "InputText", "value": 42, "label": "Random Seed"},
+}
 
 
-def plot_convergence(
-    results: dict[Strategy, pd.DataFrame],
-    n_agents: int,
-    title: str | None = None,
-    output_path: Optional[str] = None,
-) -> None:
-    """Plot convergence curves for all strategies with shaded ±1 std bands.
-
-    Args:
-        results: Dict mapping Strategy to aggregated DataFrame.
-        n_agents: Number of agents (used for y-axis normalization).
-        title: Plot title. Defaults to a descriptive title.
-        output_path: If provided, saves the figure to this path
-            (not used in show-only mode).
-    """
-    fig, ax = plt.subplots(figsize=(12, 7))
-
-    colors = {
-        Strategy.Q_LEARNING: "#2196F3",
-        Strategy.TIT_FOR_TAT: "#4CAF50",
-        Strategy.GRIM_TRIGGER: "#FF9800",
-        Strategy.RANDOM: "#9E9E9E",
-    }
-    labels = {
-        Strategy.Q_LEARNING: "Q-Learning",
-        Strategy.TIT_FOR_TAT: "Tit-for-Tat",
-        Strategy.GRIM_TRIGGER: "Grim Trigger",
-        Strategy.RANDOM: "Random",
-    }
-    linestyles = {
-        Strategy.Q_LEARNING: "-",
-        Strategy.TIT_FOR_TAT: "-",
-        Strategy.GRIM_TRIGGER: "--",
-        Strategy.RANDOM: ":",
-    }
-
-    for strategy, df in results.items():
-        if df.empty:
-            continue
-
-        step_col = (
-            "index"
-            if "index" in df.columns
-            else "Step"
-            if "Step" in df.columns
-            else "step"
-        )
-        ratio_mean_col = next(
-            (c for c in df.columns if "cooperation_ratio" in c and "mean" in c), None
-        )
-        if ratio_mean_col is None:
-            master_col = next(
-                (c for c in df.columns if "master_count" in c and "mean" in c), None
-            )
-            ratio_mean_col = master_col
-            std_col = next(
-                (c for c in df.columns if "master_count" in c and "std" in c), None
-            )
-        else:
-            std_col = next(
-                (c for c in df.columns if "cooperation_ratio" in c and "std" in c), None
-            )
-
-        steps = df[step_col].values
-        mean_vals = df[ratio_mean_col].values / n_agents
-        color = colors.get(strategy, "#000000")
-        label = labels.get(strategy, strategy.name)
-        ls = linestyles.get(strategy, "-")
-
-        ax.plot(steps, mean_vals, color=color, label=label, linestyle=ls, linewidth=2)
-
-        if std_col is not None:
-            std_vals = df[std_col].values / n_agents
-            ax.fill_between(
-                steps,
-                mean_vals - std_vals,
-                mean_vals + std_vals,
-                color=color,
-                alpha=0.15,
-            )
-
-    ax.set_xlabel("Step", fontsize=12)
-    ax.set_ylabel("Cooperation Ratio (Master / N)", fontsize=12)
-    ax.set_title(
-        title or f"Strategy Convergence: Cooperation Ratio Over Time (N={n_agents})",
-        fontsize=14,
+@solara.component  # noqa: N802
+def NetworkGraph(model):  # noqa: N802
+    """Circular network graph: agents=nodes (blue/red), pairings=edges."""
+    update_counter.get()
+    solara.use_effect(
+        lambda: update_counter.set(update_counter.value + 1), [model.steps]
     )
-    ax.set_xlim(0, None)
-    ax.set_ylim(-0.05, 1.05)
-    ax.legend(loc="best", fontsize=10)
-    ax.grid(True, alpha=0.3)
 
-    plt.tight_layout()
-    plt.show()
+    fig, ax = plt.subplots(figsize=(5, 5))
+    ax.set_aspect("equal")
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    g = nx.Graph()
+    agents = list(model.agents)
+    g.add_nodes_from([a.unique_id for a in agents])
+
+    if hasattr(model, "_pairings"):
+        for a, b in model._pairings:
+            g.add_edge(a.unique_id, b.unique_id)
+
+    pos = nx.circular_layout(g)
+
+    node_colors = [
+        "#2196F3" if a.last_action == Action.MASTER else "#F44336" for a in agents
+    ]
+    nx.draw_networkx_edges(g, pos, ax=ax, alpha=0.3, edge_color="gray")
+    nx.draw_networkx_nodes(g, pos, ax=ax, node_color=node_colors, node_size=300)
+    nx.draw_networkx_labels(g, pos, ax=ax, font_size=8)
+    ax.set_title(f"Agents & Pairings (Step {model.steps})", fontsize=10)
+
+    plt.close(fig)
+    solara.FigureMatplotlib(fig)
+
+
+@solara.component  # noqa: N802
+def TimeSeriesChart(model, measure: str = "master_count"):  # noqa: N802
+    """Altair line chart tracking a model metric over time."""
+    update_counter.get()
+    solara.use_effect(
+        lambda: update_counter.set(update_counter.value + 1), [model.steps]
+    )
+
+    df = model.datacollector.get_model_vars_dataframe().reset_index()
+    if df.empty:
+        solara.Warning("No data collected yet")
+        return
+
+    col_name = next(
+        (c for c in df.columns if measure in c and "mean" not in c and "std" not in c),
+        measure,
+    )
+    chart = (
+        alt.Chart(df)
+        .mark_line()
+        .encode(
+            x=alt.X("index:Q", title="Step"),
+            y=alt.Y(f"{col_name}:Q", title=col_name),
+        )
+        .properties(width=400, height=200)
+    )
+    solara.FigureAltair(chart)
+
+
+@solara.component  # noqa: N802
+def QTableStats(model):  # noqa: N802
+    """Bar chart of mean Q-values per (opponent_action, my_action) state."""
+    update_counter.get()
+    solara.use_effect(
+        lambda: update_counter.set(update_counter.value + 1), [model.steps]
+    )
+
+    data = []
+    for opp in [None, Action.MASTER, Action.DEPENDENT]:
+        for my in [Action.MASTER, Action.DEPENDENT]:
+            vals = [a.q_table.get((opp, my), 0) for a in model.agents]
+            data.append(
+                {
+                    "opponent": str(opp) if opp else "None",
+                    "my_action": my.name,
+                    "mean_q": sum(vals) / len(vals) if vals else 0,
+                }
+            )
+
+    df = pd.DataFrame(data)
+    chart = (
+        alt.Chart(df)
+        .mark_bar()
+        .encode(
+            x=alt.X("opponent:N", title="Opponent Last Action"),
+            y=alt.Y("mean_q:Q", title="Mean Q-Value"),
+            color=alt.Color(
+                "my_action:N",
+                title="My Action",
+                scale=alt.Scale(
+                    domain=["MASTER", "DEPENDENT"],
+                    range=["#2196F3", "#F44336"],
+                ),
+            ),
+        )
+        .properties(width=350, height=200)
+    )
+    solara.FigureAltair(chart)
+
+
+@solara.component  # noqa: N802
+def DashboardTabLayout(model):  # noqa: N802
+    """Tabbed layout combining all dashboard panels."""
+    update_counter.get()
+    tab, set_tab = solara.use_state("Network")
+    tabs = ["Network", "Master Count", "Mean Payoff", "Q-Table Stats"]
+
+    with solara.Row():
+        solara.ToggleButtonsSingle(value=tab, on_value=set_tab, values=tabs)
+
+    with solara.Row():
+        if tab == "Network":
+            NetworkGraph(model)
+        elif tab == "Master Count":
+            TimeSeriesChart(model, "master_count")
+        elif tab == "Mean Payoff":
+            TimeSeriesChart(model, "mean_payoff")
+        elif tab == "Q-Table Stats":
+            QTableStats(model)
