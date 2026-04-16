@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 
 from batch_runner import aggregate_runs, run_batch
 from comparison_engine import compare_strategies, print_summary
 from edu_game_model import EduGameModel
 from student_agent import Strategy
-from visualization import plot_convergence
 
 
 # this file grew unexpectedly large as I added more features, so it needs some refactoring after visualization step
@@ -26,7 +26,7 @@ def run_single(
     df = model.datacollector.get_model_vars_dataframe()
     last = df.iloc[-1]
     print(
-        f"Final: Step {steps} — Master={last['master_count']}, "
+        f"Final: Step {steps} , Master={last['master_count']}, "
         f"Dependent={last['dependent_count']}, "
         f"Mean payoff={last['mean_payoff']:.1f}"
     )
@@ -72,16 +72,29 @@ def run_compare_mode(
     n_runs: int,
     seed: int | None,
 ) -> None:
-    """Run all strategies and display comparison visualization."""
+    """Run all strategies and print comparison summary."""
     print(f"Comparing all strategies: {n_agents} agents, {steps} steps, {n_runs} runs per strategy")
     results = compare_strategies(n_agents=n_agents, steps=steps, n_runs=n_runs, seed=seed)
     print_summary(results, n_agents)
-    plot_convergence(results, n_agents)
+
+
+def run_serve_mode(
+    n_agents: int,
+    steps: int,
+    seed: int | None,
+) -> int:
+    """Launch the SolaraViz dashboard server."""
+    cmd = ["solara", "run", "app.py"]
+    env = {}
+    if seed is not None:
+        env["SOLARA_SEED"] = str(seed)
+    full_env = {**subprocess.os.environ.copy(), **env}
+    return subprocess.run(cmd, env=full_env).returncode
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description=("a computational proof of the game-theoretic model for programming education")
+        description="a computational proof of the game-theoretic model for programming education"
     )
     parser.add_argument(
         "-n", "--agents", type=int, default=20, help="Number of agents (default: 20)"
@@ -125,6 +138,11 @@ def main() -> int:
         action="store_true",
         help="Compare all strategies with visualization",
     )
+    parser.add_argument(
+        "--serve",
+        action="store_true",
+        help="Launch the SolaraViz interactive dashboard",
+    )
     args = parser.parse_args()
 
     strategy_map = {
@@ -134,6 +152,13 @@ def main() -> int:
         "random": Strategy.RANDOM,
     }
     strategy = strategy_map[args.strategy]
+
+    if args.serve:
+        return run_serve_mode(
+            n_agents=args.agents,
+            steps=args.steps,
+            seed=args.seed,
+        )
 
     if args.compare:
         run_compare_mode(
