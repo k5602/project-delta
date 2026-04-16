@@ -31,13 +31,27 @@ uv sync
 uv run python main.py -n 20 -s 1000 --seed 42
 
 # Compare strategies
-uv run python main.py -n 20 -s 500 --strategy tit_for_tat
-uv run python main.py -n 20 -s 500 --strategy grim_trigger
-uv run python main.py -n 20 -s 500 --strategy random
+uv run python main.py -n 20 -s 500 --compare --runs 5
 
 # Export results to CSV
 uv run python main.py -n 20 -s 1000 --output results.csv
 ```
+
+### Interactive Dashboard
+
+Launch the live SolaraViz dashboard:
+
+```bash
+uv run python main.py --serve
+```
+
+The dashboard provides:
+- **Network graph** - agents as nodes (blue=Master, red=Dependent), edges = current pairings
+- **Master Count** - time-series of Master/Dependent agent counts per step
+- **Mean Payoff** - time-series of mean agent payoff per step
+- **Q-Table Stats** - grouped bar chart of mean Q-values by (opponent_action, my_action) state
+
+Sliders control `n_agents`, `strategy`, and `rng` (random seed).
 
 ### CLI Options
 
@@ -48,6 +62,10 @@ uv run python main.py -n 20 -s 1000 --output results.csv
 | `--seed` | Random seed | None |
 | `--strategy` | Agent strategy | q_learning |
 | `--output` | CSV output path | None |
+| `--runs` | Number of batch runs | 5 |
+| `--batch` | Run in batch mode | False |
+| `--compare` | Compare all strategies (print summary) | False |
+| `--serve` | Launch SolaraViz interactive dashboard | False |
 
 ### Strategies
 
