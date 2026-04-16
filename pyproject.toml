@@ -7,5 +7,19 @@ requires-python = ">=3.13"
 dependencies = [
     "matplotlib>=3.10.8",
     "mesa>=3.5.1",
+    "networkx>=3.6.1",
     "pandas>=3.0.2",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "ruff>=0.15.10",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
