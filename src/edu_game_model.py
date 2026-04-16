@@ -1,6 +1,7 @@
 from itertools import pairwise
 
 import mesa
+import numpy as np
 
 from payoff_config import Action, PayoffConfig
 from payoff_engine import compute_payoff
@@ -15,7 +16,10 @@ class EduGameModel(mesa.Model):
         strategy: Strategy = Strategy.Q_LEARNING,
         seed: int | None = None,
     ) -> None:
-        super().__init__(seed=seed)
+        self.rng_ = (
+            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+        )
+        super().__init__(rng=self.rng_)
         self.payoff_config = payoff_config or PayoffConfig()
         self.strategy = strategy
         self.datacollector = mesa.DataCollector(
@@ -31,6 +35,20 @@ class EduGameModel(mesa.Model):
                     if m.num_agents > 0
                     else 0
                 ),
+                "max_payoff": lambda m: max((a.payoff for a in m.agents), default=0),
+                "min_payoff": lambda m: min((a.payoff for a in m.agents), default=0),
+                "mean_q_master": lambda m: (
+                    sum(a.q_table[(None, Action.MASTER)] for a in m.agents)
+                    / m.num_agents
+                    if m.num_agents > 0
+                    else 0
+                ),
+                "cooperation_ratio": lambda m: (
+                    sum(1 for a in m.agents if a.last_action == Action.MASTER)
+                    / m.num_agents
+                    if m.num_agents > 0
+                    else 0.0
+                ),
             }
         )
 
@@ -45,7 +63,7 @@ class EduGameModel(mesa.Model):
 
     def _pair_agents(self):
         agents = list(self.agents)
-        self.random.shuffle(agents)
+        self.rng_.shuffle(agents)
 
         if len(agents) % 2 != 0:
             agents.append(agents[0])

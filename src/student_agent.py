@@ -41,7 +41,7 @@ class StudentAgent(mesa.Agent):
 
     def select_action(self) -> Action:
         if self.strategy == Strategy.RANDOM:
-            return self.random.choice(list(Action))
+            return self.model.rng.choice(list(Action))
 
         if self.strategy == Strategy.TIT_FOR_TAT:
             if self.last_opponent_action is None:
@@ -56,8 +56,8 @@ class StudentAgent(mesa.Agent):
             return Action.MASTER
 
         if self.strategy == Strategy.Q_LEARNING:
-            if self.model.random.random() < self.epsilon:
-                return self.model.random.choice(list(Action))
+            if self.model.rng.random() < self.epsilon:
+                return self.model.rng.choice(list(Action))
 
             state = (self.last_opponent_action, None)
             q_master = self.q_table[(state[0], Action.MASTER)]
