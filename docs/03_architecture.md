@@ -33,11 +33,12 @@
 |---|---|
 | `EduGameModel` | Top-level controller. Manages simulation lifecycle, pairing, data collection, and time advancement. Uses `rng` (numpy RNG) for reproducible shuffling. |
 | `StudentAgent` | Decision-maker. Inherits from `mesa.Agent`. Implements Q-learning with optimistic initialization (value=80). |
-| `DataCollector` | Built-in Mesa tool. Logs model-level metrics each step via `model_reporters`. |
+| `DataCollector` | Built-in Mesa tool. Logs model-level and agent-level metrics each step via `model_reporters` and `agent_reporters`. |
 | `PayoffEngine` | Stateless function. Computes payoff pairs for given actions. |
 | `batch_runner` | SeedSequence-based batch infrastructure. Runs multiple independent simulations. |
 | `comparison_engine` | Runs all strategies under identical conditions for fair comparison. |
-| `visualization` | Matplotlib-based convergence plotting with shaded std bands. |
+| `visualization` | SolaraViz dashboard components: `NetworkGraph`, `TimeSeriesChart`, `QTableStats`, `DashboardTabLayout`. |
+| `app.py` | SolaraViz entry point. Launches the interactive web dashboard. |
 
 
 ## Interaction Protocol
