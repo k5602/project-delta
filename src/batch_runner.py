@@ -53,7 +53,9 @@ def aggregate_runs(
     """
     if value_cols is None:
         value_cols = [
-            c for c in df.columns if c != "run" and df[c].dtype in (int, float)
+            c
+            for c in df.columns
+            if c not in ("run", "index") and df[c].dtype in (int, float)
         ]
 
     agg = df.groupby("index")[value_cols].agg(["mean", "std"])
