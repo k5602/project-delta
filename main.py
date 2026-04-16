@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 
-from batch_runner import aggregate_runs, run_batch
-from comparison_engine import compare_strategies, print_summary
-from edu_game_model import EduGameModel
-from student_agent import Strategy
+from src.batch_runner import aggregate_runs, run_batch
+from src.comparison_engine import compare_strategies, print_summary
+from src.edu_game_model import EduGameModel
+from src.student_agent import Strategy
 
 
 # this file grew unexpectedly large as I added more features, so it needs some refactoring after visualization step
@@ -48,7 +49,9 @@ def run_batch_mode(
     print(
         f"Running {n_runs} batch runs: {n_agents} agents, {steps} steps, strategy={strategy.name}"
     )
-    df = run_batch(strategy=strategy, n_agents=n_agents, steps=steps, n_runs=n_runs, seed=seed)
+    df = run_batch(
+        strategy=strategy, n_agents=n_agents, steps=steps, n_runs=n_runs, seed=seed
+    )
     agg = aggregate_runs(df)
 
     last_step = agg.iloc[-1]
@@ -73,8 +76,12 @@ def run_compare_mode(
     seed: int | None,
 ) -> None:
     """Run all strategies and print comparison summary."""
-    print(f"Comparing all strategies: {n_agents} agents, {steps} steps, {n_runs} runs per strategy")
-    results = compare_strategies(n_agents=n_agents, steps=steps, n_runs=n_runs, seed=seed)
+    print(
+        f"Comparing all strategies: {n_agents} agents, {steps} steps, {n_runs} runs per strategy"
+    )
+    results = compare_strategies(
+        n_agents=n_agents, steps=steps, n_runs=n_runs, seed=seed
+    )
     print_summary(results, n_agents)
 
 
@@ -88,7 +95,7 @@ def run_serve_mode(
     env = {}
     if seed is not None:
         env["SOLARA_SEED"] = str(seed)
-    full_env = {**subprocess.os.environ.copy(), **env}
+    full_env = {**os.environ.copy(), **env}
     return subprocess.run(cmd, env=full_env).returncode
 
 

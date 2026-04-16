@@ -4,7 +4,7 @@ from typing import Optional
 
 import mesa
 
-from payoff_config import Action
+from src.payoff_config import Action
 
 
 class Strategy(Enum):

@@ -1,4 +1,4 @@
-from payoff_config import Action, PayoffConfig
+from src.payoff_config import Action, PayoffConfig
 
 
 def compute_payoff(

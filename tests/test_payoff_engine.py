@@ -1,5 +1,5 @@
-from payoff_config import Action, PayoffConfig
-from payoff_engine import compute_payoff
+from src.payoff_config import Action, PayoffConfig
+from src.payoff_engine import compute_payoff
 
 
 class TestPayoffEngine:

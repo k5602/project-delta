@@ -1,6 +1,6 @@
-from edu_game_model import EduGameModel
-from payoff_config import Action
-from student_agent import Strategy
+from src.edu_game_model import EduGameModel
+from src.payoff_config import Action
+from src.student_agent import Strategy
 
 
 class TestEduGameModel:

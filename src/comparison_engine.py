@@ -4,8 +4,8 @@ from typing import Optional
 
 import pandas as pd
 
-from batch_runner import run_comparison_batch
-from student_agent import Strategy
+from src.batch_runner import run_comparison_batch
+from src.student_agent import Strategy
 
 
 def _find_col(df: pd.DataFrame, pattern: str) -> str | None:

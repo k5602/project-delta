@@ -3,8 +3,8 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from edu_game_model import EduGameModel
-from student_agent import Strategy
+from src.edu_game_model import EduGameModel
+from src.student_agent import Strategy
 
 
 def run_batch(

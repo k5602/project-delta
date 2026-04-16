@@ -3,9 +3,9 @@ from itertools import pairwise
 import mesa
 import numpy as np
 
-from payoff_config import Action, PayoffConfig
-from payoff_engine import compute_payoff
-from student_agent import Strategy, StudentAgent
+from src.payoff_config import Action, PayoffConfig
+from src.payoff_engine import compute_payoff
+from src.student_agent import Strategy, StudentAgent
 
 
 class EduGameModel(mesa.Model):
@@ -13,7 +13,7 @@ class EduGameModel(mesa.Model):
         self,
         n_agents: int,
         payoff_config: PayoffConfig | None = None,
-        strategy: Strategy = Strategy.Q_LEARNING,
+        strategy: Strategy | str = Strategy.Q_LEARNING,
         seed: int | None = None,
     ) -> None:
         self.rng_ = (
@@ -21,7 +21,7 @@ class EduGameModel(mesa.Model):
         )
         super().__init__(rng=self.rng_)
         self.payoff_config = payoff_config or PayoffConfig()
-        self.strategy = strategy
+        self.strategy = self._normalize_strategy(strategy)
         self.datacollector = mesa.DataCollector(
             model_reporters={
                 "master_count": lambda m: sum(
@@ -58,9 +58,22 @@ class EduGameModel(mesa.Model):
         )
 
         for _ in range(n_agents):
-            StudentAgent(self, strategy=strategy)
+            StudentAgent(self, strategy=self.strategy)
 
         self._pairings: list[tuple[StudentAgent, StudentAgent]] = []
+
+    @staticmethod
+    def _normalize_strategy(strategy: Strategy | str) -> Strategy:
+        if isinstance(strategy, Strategy):
+            return strategy
+        if isinstance(strategy, str):
+            try:
+                return Strategy[strategy.strip().upper()]
+            except KeyError as exc:
+                raise ValueError(f"Unknown strategy '{strategy}'") from exc
+        raise TypeError(
+            f"strategy must be Strategy or str, got {type(strategy).__name__}"
+        )
 
     @property
     def num_agents(self) -> int:

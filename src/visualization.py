@@ -6,7 +6,7 @@ import networkx as nx
 import pandas as pd
 import solara
 
-from payoff_config import Action
+from src.payoff_config import Action
 
 update_counter = solara.reactive(0)
 
@@ -20,7 +20,7 @@ model_params = {
         "value": "Q_LEARNING",
         "label": "Strategy",
     },
-    "rng": {"type": "InputText", "value": 42, "label": "Random Seed"},
+    "seed": {"type": "InputText", "value": 42, "label": "Random Seed"},
 }
 
 
