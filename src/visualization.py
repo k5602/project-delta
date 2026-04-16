@@ -48,7 +48,13 @@ def plot_convergence(
         if df.empty:
             continue
 
-        step_col = "Step" if "Step" in df.columns else "step"
+        step_col = (
+            "index"
+            if "index" in df.columns
+            else "Step"
+            if "Step" in df.columns
+            else "step"
+        )
         ratio_mean_col = next(
             (c for c in df.columns if "cooperation_ratio" in c and "mean" in c), None
         )
